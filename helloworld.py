@@ -14,24 +14,32 @@ class MainPage(webapp.RequestHandler):
     def get(self):
         self.response.out.write('<html><body>')
 
-        greetings = Greeting.gql("ORDER BY date DESC LIMIT 10")
+        if users.get_current_user():
+            #greetings = Greeting.gql("WHERE author = :1 ORDER BY date DESC", users.get_current_user())
+            #greetings = Greeting.gql("WHERE author = :author ORDER BY date DESC", author=users.get_current_user())
+            #greetings = Greeting.gql("ORDER BY date DESC LIMIT 10")
+            greetings = Greeting.all()
+            greetings.filter("author =", users.get_current_user())
+            greetings.order("-date")
 
-        for greeting in greetings:
-            if greeting.author:
-                self.response.out.write('<b>%s</b> wrote:' % greeting.author.nickname())
-            else:
-                self.response.out.write('An anonymous person wrote:')
-            self.response.out.write('<blockquote>%s</blockquote>' %
-                                    cgi.escape(greeting.content))
+            for greeting in greetings:
+                if greeting.author:
+                    self.response.out.write('<b>%s</b> wrote:' % greeting.author.nickname())
+                else:
+                    self.response.out.write('An anonymous person wrote:')
+                self.response.out.write('<blockquote>%s</blockquote>' %
+                                        cgi.escape(greeting.content))
 
-        # Write the submission form and the footer of the page
-        self.response.out.write("""
-              <form action="/sign" method="post">
-                <div><textarea name="content" rows="3" cols="60"></textarea></div>
-                <div><input type="submit" value="Sign Guestbook"></div>
-              </form>
-            </body>
-          </html>""")
+            # Write the submission form and the footer of the page
+            self.response.out.write("""
+                  <form action="/sign" method="post">
+                    <div><textarea name="content" rows="3" cols="60"></textarea></div>
+                    <div><input type="submit" value="Sign Guestbook"></div>
+                  </form>
+                </body>
+              </html>""")
+        else:
+            self.redirect(users.create_login_url(self.request.uri))
 
 class Guestbook(webapp.RequestHandler):
     def post(self):
