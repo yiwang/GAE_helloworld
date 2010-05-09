@@ -14,7 +14,7 @@ class MainPage(webapp.RequestHandler):
     def get(self):
         self.response.out.write('<html><body>')
 
-        greetings = db.GqlQuery("SELECT * FROM Greeting ORDER BY date DESC LIMIT 10")
+        greetings = Greeting.gql("ORDER BY date DESC LIMIT 10")
 
         for greeting in greetings:
             if greeting.author:
