@@ -1,8 +1,10 @@
+import os
 import cgi
 
 from google.appengine.api import users
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp.util import run_wsgi_app
+from google.appengine.ext.webapp import template
 from google.appengine.ext import db
 
 class Greeting(db.Model):
@@ -12,34 +14,24 @@ class Greeting(db.Model):
 
 class MainPage(webapp.RequestHandler):
     def get(self):
-        self.response.out.write('<html><body>')
+        greetings_query = Greeting.all().order('-date')
+        greetings = greetings_query.fetch(10)
 
         if users.get_current_user():
-            #greetings = Greeting.gql("WHERE author = :1 ORDER BY date DESC", users.get_current_user())
-            #greetings = Greeting.gql("WHERE author = :author ORDER BY date DESC", author=users.get_current_user())
-            #greetings = Greeting.gql("ORDER BY date DESC LIMIT 10")
-            greetings = Greeting.all()
-            greetings.filter("author =", users.get_current_user())
-            greetings.order("-date")
-
-            for greeting in greetings:
-                if greeting.author:
-                    self.response.out.write('<b>%s</b> wrote:' % greeting.author.nickname())
-                else:
-                    self.response.out.write('An anonymous person wrote:')
-                self.response.out.write('<blockquote>%s</blockquote>' %
-                                        cgi.escape(greeting.content))
-
-            # Write the submission form and the footer of the page
-            self.response.out.write("""
-                  <form action="/sign" method="post">
-                    <div><textarea name="content" rows="3" cols="60"></textarea></div>
-                    <div><input type="submit" value="Sign Guestbook"></div>
-                  </form>
-                </body>
-              </html>""")
+            url = users.create_logout_url(self.request.uri)
+            url_linktext = 'Logout'
         else:
-            self.redirect(users.create_login_url(self.request.uri))
+            url = users.create_login_url(self.request.uri)
+            url_linktext = 'Login'
+
+        template_values = {
+            'greetings': greetings,
+            'url': url,
+            'url_linktext': url_linktext,
+            }
+
+        path = os.path.join(os.path.dirname(__file__), 'index.html')
+        self.response.out.write(template.render(path, template_values))
 
 class Guestbook(webapp.RequestHandler):
     def post(self):
